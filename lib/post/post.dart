@@ -1,5 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:inst_dupl/post/postContent.dart';
+
+import 'likeButton.dart';
+import 'likesSign.dart';
 
 class Post extends StatefulWidget {
   final String avatarImageUri;
@@ -7,24 +13,48 @@ class Post extends StatefulWidget {
   final String contentUri;
   final String likesText;
   final String when;
-  Post({
-    @required this.avatarImageUri,
-    @required this.postPublisher,
-    @required this.contentUri,
-    @required this.likesText,
-    @required this.when,
-  });
+  final int initialLikesCount;
+  final Function postLiked;
+  Post(
+      {@required this.avatarImageUri,
+      @required this.postPublisher,
+      @required this.contentUri,
+      @required this.likesText,
+      @required this.initialLikesCount,
+      @required this.when,
+      @required this.postLiked});
 
   @override
-  _PostState createState() => _PostState();
+  _PostState createState() => _PostState(
+      avatarImageUri: this.avatarImageUri, likesCount: this.initialLikesCount);
 }
 
 class _PostState extends State<Post> {
-  bool isPressed = false;
+  bool isLikeBtnPressed = false;
+  bool showContentCoveringHeart = false;
+  int likesCount;
+  NetworkImage avatarImage;
+
+  _PostState({this.likesCount, String avatarImageUri}) {
+    avatarImage = new NetworkImage(avatarImageUri);
+  }
+
+  void like(bool toggleContentCoveringHeart) => setState(() {
+        widget.postLiked(widget);
+        isLikeBtnPressed = !isLikeBtnPressed;
+        likesCount = isLikeBtnPressed ? ++likesCount : --likesCount;
+        if (toggleContentCoveringHeart) {
+          showContentCoveringHeart = true;
+          Timer(
+              const Duration(milliseconds: 2000),
+              () => setState(() {
+                    showContentCoveringHeart = false;
+                  }));
+        }
+      });
 
   @override
   Widget build(BuildContext context) {
-    var avatarImage = new NetworkImage(widget.avatarImageUri);
     return Column(
       mainAxisAlignment: MainAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -62,13 +92,10 @@ class _PostState extends State<Post> {
             ],
           ),
         ),
-        Flexible(
-          fit: FlexFit.loose,
-          child: new Image.network(
-            widget.contentUri,
-            fit: BoxFit.cover,
-          ),
-        ),
+        new PostContent(
+            contentUri: widget.contentUri,
+            like: like,
+            showHeart: showContentCoveringHeart),
         Padding(
           padding: const EdgeInsets.all(16.0),
           child: Row(
@@ -77,16 +104,8 @@ class _PostState extends State<Post> {
               new Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: <Widget>[
-                  new IconButton(
-                    icon: new Icon(
-                        isPressed ? Icons.favorite : FontAwesomeIcons.heart),
-                    color: isPressed ? Colors.red : Colors.black,
-                    onPressed: () {
-                      setState(() {
-                        isPressed = !isPressed;
-                      });
-                    },
-                  ),
+                  new LikeButton(
+                      isLikeBtnPressed: isLikeBtnPressed, like: like),
                   new SizedBox(
                     width: 16.0,
                   ),
@@ -103,13 +122,7 @@ class _PostState extends State<Post> {
             ],
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: Text(
-            widget.likesText,
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-        ),
+        new LikesSign(likesCount: likesCount, likesText: widget.likesText),
         Padding(
           padding: const EdgeInsets.fromLTRB(16.0, 16.0, 0.0, 8.0),
           child: Row(
